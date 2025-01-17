@@ -11,7 +11,7 @@ app.use(cors());
 app.use(express.json());
 
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.zh93j.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
@@ -29,18 +29,62 @@ async function run() {
     await client.connect();
 
     const petCollection = client.db("TailTales").collection("pets");
+    const userCollection = client.db("TailTales").collection("users");
+
+    //users related api
+    app.post('/users', async (req, res)=>{
+      const user = req.body;
+      const result = await userCollection.insertOne(user);
+      res.send(result);
+    })
+
+    //pets collection
 
     app.get('/pets', async(req, res)=>{
         const result = await petCollection.find().toArray()
         res.send(result);
     })
 
-    //pets collection
+    // get pet my email(for my added pet page)
+
+    app.get('/pets/users/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email : email};
+      const result = await petCollection.find(query).toArray();
+      res.send(result);
+
+    })
+    
+    // app.get('/pets/:id', async(req, res)=>{
+    //   const id = req.params.id;
+    //   const query = {_id : new ObjectId(id)};
+    //   const result = await petCollection.find(query).toArray();
+    //   res.send(result);
+    // })
+
+    // get pet by id
+    app.get('/pets/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)};
+      const result = await petCollection.findOne(query);
+      // const result = await petCollection.findOne(query).toArray();
+      res.send(result);
+    })
+
+
+    
     app.post('/pets', async (req, res)=>{
         const petList = req.body;
         const result = await petCollection.insertOne(petList);
         res.send(result);
       })
+
+    app.delete('/pets/:id', async(req, res)=>{
+      const id = req.params.id;
+      const query= {_id : new ObjectId(id)};
+      const result= await petCollection.deleteOne(query);
+      res.send(result);
+    })
 
 
 
