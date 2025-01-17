@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const cors = require('cors');
+const jwt = require('jsonwebtoken');
 // const jwt = require('jsonwebtoken');
 require('dotenv').config();
 // const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -31,30 +32,116 @@ async function run() {
     const petCollection = client.db("TailTales").collection("pets");
     const userCollection = client.db("TailTales").collection("users");
 
-    //users related api
-    app.post('/users', async (req, res)=>{
+    //jwt related api
+    app.post('/jwt', async(req, res)=>{
       const user = req.body;
+      const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+        expiresIn: '5h'
+      });
+      res.send({token});
+    })
+
+    //middlewares
+    const verifyToken = (req, res, next) =>{
+      // console.log('inside verify token', req.headers);
+      console.log('inside verify token', req.headers.authorization);
+      if(!req.headers.authorization){
+        return res.status(401).send({message: 'Unauthorized access'})
+      }
+      const token = req.headers.authorization.split(' ')[1];
+
+      jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded)=>{
+        if(err){
+          return res.status(401).send({message: 'Unauthorized access'})
+        }
+        req.decoded = decoded;
+       next()
+      })
+      // next();
+    }
+
+     // use verify admin after verifytOKEN
+     const verifyAdmin = async (req, res, next)=>{
+      const email = req.decoded.email;
+      const query = {email : email};
+      const user = await userCollection.findOne(query);
+      const isAdmin = user?.role === 'admin';
+      if(!isAdmin){
+        return res.status(403).send({message: 'forbidden access'});
+      }
+      next();
+    }
+
+    //users related api
+    app.get('/users', verifyToken, verifyAdmin, async(req, res)=>{
+    
+      const result = await userCollection.find().toArray();
+      res.send(result)
+    })
+
+    app.get('/users/admin/:email', verifyToken, async(req, res)=>{
+      const email = req.params.email;
+
+      if(email != req.decoded.email){
+        return res.status(403).send({message: 'Forbidden access'})
+      }
+      const query = {email : email};
+      const user = await userCollection.findOne(query);
+      let admin = false;
+      if(user){
+        admin = user?.role === 'admin'
+        console.log(admin);
+      }
+      res.send({admin});
+    })
+
+    app.post('/users', async (req, res) => {
+      const user = req.body;
+      const query = { email: user.email };
+      const existingUser = await userCollection.findOne(query);
+      if (existingUser) {
+        return res.send({ message: 'user already exists', insertedId: null })
+      }
       const result = await userCollection.insertOne(user);
+      res.send(result);
+    })
+
+    app.delete('/users/:id', verifyToken, verifyAdmin, async (req, res)=>{
+      const id = req.params.id;
+      const query = {_id : new ObjectId(id)};
+      const result = await userCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    app.patch('/users/admin/:id', verifyToken, verifyAdmin, async(req, res)=>{
+      const id = req.params.id;
+      const filter = {_id : new ObjectId(id)};
+      const updatedDoc = {
+        $set:{
+          role: 'admin'
+        }
+      }
+      const result = await userCollection.updateOne(filter, updatedDoc);
       res.send(result);
     })
 
     //pets collection
 
-    app.get('/pets', async(req, res)=>{
-        const result = await petCollection.find().toArray()
-        res.send(result);
+    app.get('/pets', async (req, res) => {
+      const result = await petCollection.find().toArray()
+      res.send(result);
     })
 
     // get pet my email(for my added pet page)
 
-    app.get('/pets/users/:email', async(req, res)=>{
+    app.get('/pets/users/:email', async (req, res) => {
       const email = req.params.email;
-      const query = {email : email};
+      const query = { email: email };
       const result = await petCollection.find(query).toArray();
       res.send(result);
 
     })
-    
+
     // app.get('/pets/:id', async(req, res)=>{
     //   const id = req.params.id;
     //   const query = {_id : new ObjectId(id)};
@@ -63,26 +150,26 @@ async function run() {
     // })
 
     // get pet by id
-    app.get('/pets/:id', async(req, res)=>{
+    app.get('/pets/:id', async (req, res) => {
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)};
+      const query = { _id: new ObjectId(id) };
       const result = await petCollection.findOne(query);
       // const result = await petCollection.findOne(query).toArray();
       res.send(result);
     })
 
 
-    
-    app.post('/pets', async (req, res)=>{
-        const petList = req.body;
-        const result = await petCollection.insertOne(petList);
-        res.send(result);
-      })
 
-    app.delete('/pets/:id', async(req, res)=>{
+    app.post('/pets', async (req, res) => {
+      const petList = req.body;
+      const result = await petCollection.insertOne(petList);
+      res.send(result);
+    })
+
+    app.delete('/pets/:id', async (req, res) => {
       const id = req.params.id;
-      const query= {_id : new ObjectId(id)};
-      const result= await petCollection.deleteOne(query);
+      const query = { _id: new ObjectId(id) };
+      const result = await petCollection.deleteOne(query);
       res.send(result);
     })
 
@@ -99,10 +186,10 @@ async function run() {
 run().catch(console.dir);
 
 
-app.get('/', (req, res)=>{
-    res.send('TailTales is runing')
+app.get('/', (req, res) => {
+  res.send('TailTales is runing')
 })
 
-app.listen(port,()=>{
-    console.log(`TailTales is running on port ${port}`);
+app.listen(port, () => {
+  console.log(`TailTales is running on port ${port}`);
 })
