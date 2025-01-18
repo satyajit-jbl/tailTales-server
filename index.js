@@ -174,6 +174,22 @@ async function run() {
       res.send(result);
     })
 
+    // update pet as adopted
+    app.patch('/pets/:id', async (req, res) => {
+      const { id } = req.params;
+      const update = { adopted: true };
+      try {
+        const result = await petCollection.updateOne(
+          { _id: new ObjectId(id) },
+          { $set: update }
+        );
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({ message: 'Failed to update pet status', error });
+      }
+    });
+    
+
     //donation related apis
 
     app.post('/donations', async(req, res)=>{
