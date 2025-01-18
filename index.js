@@ -31,6 +31,7 @@ async function run() {
 
     const petCollection = client.db("TailTales").collection("pets");
     const userCollection = client.db("TailTales").collection("users");
+    const donationCollection = client.db("TailTales").collection("donations");
 
     //jwt related api
     app.post('/jwt', async(req, res)=>{
@@ -125,10 +126,10 @@ async function run() {
       res.send(result);
     })
 
-    //pets collection
+    //pets related apis'
 
     app.get('/pets', async (req, res) => {
-      const result = await petCollection.find().toArray()
+      const result = await petCollection.find().sort({data:-1}).toArray()
       res.send(result);
     })
 
@@ -170,6 +171,26 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await petCollection.deleteOne(query);
+      res.send(result);
+    })
+
+    //donation related apis
+
+    app.post('/donations', async(req, res)=>{
+      const donation = req.body;
+      const result = await donationCollection.insertOne(donation);
+      res.send(result);
+    })
+
+    app.get('/donations', async(req,res)=>{
+    const result = await donationCollection.find().toArray();
+    res.send(result);
+    })
+
+    app.get('/donations/users/:email', async(req, res)=>{
+      const email = req.params.email;
+      const query = {email: email};
+      const result = await donationCollection.find(query).toArray();
       res.send(result);
     })
 
