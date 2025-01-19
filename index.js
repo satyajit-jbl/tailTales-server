@@ -32,6 +32,7 @@ async function run() {
     const petCollection = client.db("TailTales").collection("pets");
     const userCollection = client.db("TailTales").collection("users");
     const donationCollection = client.db("TailTales").collection("donations");
+    const adoptCollection = client.db("TailTales").collection("adopts");
 
     //jwt related api
     app.post('/jwt', async(req, res)=>{
@@ -235,6 +236,16 @@ async function run() {
           res.status(500).send({ message: 'Internal Server Error' });
       }
   });
+
+  //  Adopt related apis'
+
+  app.post('/adopt', async (req, res) => {
+    const adoptData = req.body;
+    const result = await adoptCollection.insertOne(adoptData);
+    res.send(result);
+  })
+
+
   
 
 
