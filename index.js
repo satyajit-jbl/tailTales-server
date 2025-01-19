@@ -210,6 +210,33 @@ async function run() {
       res.send(result);
     })
 
+    app.put('/donation-campaigns/:id/pause', async (req, res) => {
+      const { id } = req.params;
+      const { isPaused } = req.body;
+  
+      if (typeof isPaused !== 'boolean') {
+          return res.status(400).send({ message: 'Invalid pause status' });
+      }
+  
+      try {
+          // Update the pause status in the database
+          const result = await donationCollection.updateOne(
+              { _id: new ObjectId(id) },
+              { $set: { isPaused: isPaused } }
+          );
+  
+          if (result.modifiedCount === 0) {
+              return res.status(404).send({ message: 'Donation campaign not found' });
+          }
+  
+          res.send({ message: 'Pause status updated successfully' });
+      } catch (error) {
+          console.error('Error updating pause status:', error);
+          res.status(500).send({ message: 'Internal Server Error' });
+      }
+  });
+  
+
 
 
     // Send a ping to confirm a successful connection
