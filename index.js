@@ -2,9 +2,8 @@ const express = require('express');
 const app = express();
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
-// const jwt = require('jsonwebtoken');
 require('dotenv').config();
-// const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const port = process.env.PORT || 5000;
 
 //middleware
@@ -33,6 +32,7 @@ async function run() {
     const userCollection = client.db("TailTales").collection("users");
     const donationCollection = client.db("TailTales").collection("donations");
     const adoptCollection = client.db("TailTales").collection("adopts");
+    const donationAmountCollection = client.db("TailTales").collection("donationAmounts");
 
     //jwt related api
     app.post('/jwt', async(req, res)=>{
@@ -156,7 +156,6 @@ async function run() {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await petCollection.findOne(query);
-      // const result = await petCollection.findOne(query).toArray();
       res.send(result);
     })
 
@@ -204,6 +203,13 @@ async function run() {
     res.send(result);
     })
 
+    app.get('/donations/:id', async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await donationCollection.findOne(query);
+      res.send(result);
+    })
+
     app.get('/donations/users/:email', async(req, res)=>{
       const email = req.params.email;
       const query = {email: email};
@@ -244,6 +250,96 @@ async function run() {
     const result = await adoptCollection.insertOne(adoptData);
     res.send(result);
   })
+
+
+  //payment intent
+  app.post('/create-payment-intent', async(req, res)=>{
+    const {donationAmount} = req.body;
+    const amount = parseInt(donationAmount*100);
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amount,
+      currency: "usd",
+      payment_method_types:['card']
+    });
+
+    res.send({
+      clientSecret: paymentIntent.client_secret,
+    });
+  })
+
+  // app.post('/payments', async (req, res)=>{
+  //   // const payment = req.body;
+  //   const { email, donationAmount,date, transactionId } = req.body;
+
+  //   const payment = {
+  //     email,
+  //     donationAmount,
+  //     date,
+  //     transactionId
+  //   };
+
+  //   const donationResult = await donationAmountCollection.insertOne(payment)
+
+  //   //now increase currentAmount in donation campaign
+  //   const updateResult = await donationCollection.updateOne(
+  //     // { email: email }, // Assuming each donation is associated with a campaign identified by email or another unique identifier
+  //     {
+  //       $inc: {
+  //         currentAmount: donationAmount // Increment currentAmount by donationAmount
+  //       }
+  //     }
+  //   );
+  //   if (updateResult.modifiedCount === 0) {
+  //     return res.status(404).send({ message: 'Campaign not found' });
+  //   }
+  //   console.log('Payment processed for user:');
+  //   res.send({ message: 'Payment processed successfully', donationResult });
+  //   console.log('Payment info', payment);
+  //   // res.send(donationResult)
+
+  // })
+
+  app.post('/payments', async (req, res) => {
+    const { id, email, donationAmount, date, transactionId } = req.body;
+  
+    const payment = {
+      id,
+      email,
+      donationAmount,
+      date,
+      transactionId
+    };
+  
+    try {
+      // Insert the payment record into donationAmountCollection
+      const donationResult = await donationAmountCollection.insertOne(payment);
+  
+      // Update the currentAmount in the corresponding donation campaign
+      const updateResult = await donationCollection.updateOne(
+        { _id: new ObjectId(id) }, // Ensure the correct field for identifying the campaign is used
+        {
+          $inc: {
+            currentAmount: donationAmount // Increment currentAmount by donationAmount
+          }
+        }
+      );
+  
+      if (updateResult.modifiedCount === 0) {
+        return res.status(404).send({ message: 'Campaign not found' });
+      }
+  
+      console.log('Payment processed for user:', email);
+  
+      // Send a success response
+      res.send({ message: 'Payment processed successfully', donationResult });
+  
+    } catch (error) {
+      console.error('Error processing payment:', error);
+      res.status(500).send({ message: 'Internal Server Error', error });
+    }
+  });
+  
 
 
   
