@@ -74,6 +74,34 @@ async function run() {
       next();
     }
 
+    // donation amount related apis'
+
+    // app.get('/donationAmt/users/:email', async(req, res)=>{
+    //   const result = await donationAmountCollection.find().toArray();
+    //   res.send(result);
+    // })
+
+  app.get('/donationAmt/users/:email', async(req, res)=>{
+    const email = req.params.email;
+    const query = {email: email};
+    const result = await donationAmountCollection.find(query).toArray();
+    res.send(result);
+  })
+
+  app.delete('/donationAmt/users/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await donationAmountCollection.deleteOne(query);
+    res.send(result);
+
+    // TODO Update the currentAmount in the corresponding donation campaign
+  })
+
+    // app.get('/donationAmount', async (req, res) => {
+    //   const result = await donationAmountCollection.find().toArray()
+    //   res.send(result);
+    // })
+
     //users related api
     app.get('/users', verifyToken, verifyAdmin, async(req, res)=>{
     
@@ -203,6 +231,38 @@ async function run() {
     res.send(result);
     })
 
+    // to Get Donators for a Donation Campaign to show in modal of MyDonationCampaigns start
+
+    app.get('/donation-campaigns/:campaignId/donators', async (req, res) => {
+      const { campaignId } = req.params;
+  
+      try {
+          // Query to find donations by campaign id
+          const donations = await donationAmountCollection
+              .find({ id: campaignId }) // Find donations for the specific campaign
+              .toArray();
+  
+          if (donations.length === 0) {
+              return res.status(404).json({ message: 'No donations found for this campaign.' });
+          }
+  
+          // Map through the donations to return donator details as per frontend structure
+          const donators = donations.map(donation => ({
+              email: donation.email,
+              donationAmount: donation.donationAmount,
+              transactionId: donation.transactionId,
+              date: donation.date,
+              petName: donation.petName
+          }));
+  
+          res.json({ donators });
+      } catch (error) {
+          console.error('Error fetching donators:', error);
+          res.status(500).json({ message: 'Internal server error' });
+      }
+  });
+  // to Get Donators for a Donation Campaign to show in modal of MyDonationCampaigns end
+
     app.get('/donations/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -242,6 +302,12 @@ async function run() {
           res.status(500).send({ message: 'Internal Server Error' });
       }
   });
+
+  //donation Amount related apis' (***************************)
+  app.get('/donationAmount', async(req, res)=>{
+    const result = await donationAmountCollection.find().toArray();
+    res.send(result);
+  })
 
   //  Adopt related apis'
 
@@ -301,14 +367,16 @@ async function run() {
   // })
 
   app.post('/payments', async (req, res) => {
-    const { id, email, donationAmount, date, transactionId } = req.body;
+    const { id, email, donationAmount, date, transactionId, petName, petImage } = req.body;
   
     const payment = {
       id,
       email,
       donationAmount,
       date,
-      transactionId
+      transactionId,
+      petName,
+      petImage
     };
   
     try {
@@ -339,6 +407,8 @@ async function run() {
       res.status(500).send({ message: 'Internal Server Error', error });
     }
   });
+
+  
   
 
 
