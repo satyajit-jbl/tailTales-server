@@ -317,6 +317,73 @@ async function run() {
     res.send(result);
   })
 
+  //adoptrequest by user (its not working , now try with below one)
+  // app.get('/adopt/users/:email', async(req, res)=>{
+  //   const email = req.params.email;
+  //   const query = {userEmail: email};
+  //   const result = await adoptCollection.find(query).toArray();
+  //   res.send(result);
+  // })
+
+  // app.get('/adoption-requests', async (req, res) => {
+  //   try {
+  //     console.log('Received request for adoption requests');
+  //     const adoptionRequests = await adoptCollection.find().toArray();
+  //     console.log('Found adoption requests:', adoptionRequests);
+  //     res.json(adoptionRequests);
+  //   } catch (error) {
+  //     console.error('Error fetching adoption requests:', error);
+  //     res.status(500).json({ message: 'Error fetching adoption requests', error });
+  //   }
+  // });
+  
+
+  // to fetch adoption requests related to the pets added by the currently logged-in user.
+  // app.get('/adoption-requests', async (req, res) => {
+  app.get('/adoption-requests/:email', async (req, res) => {
+  try {
+    // const userEmail = req.user.email; // Get the logged-in user's email from the request
+    // const userEmail = "satyajit.numista@gmail.com"; // Get the logged-in user's email from the request
+    const userEmail = req.params.email;
+    // Fetch pets added by the user
+    const userPets = await petCollection.find({ email: userEmail }).toArray();
+    const userPetIds = userPets.map(pet => pet._id.toString());
+
+    // Fetch adoption requests for these pets
+    const adoptionRequests = await adoptCollection.find({ petId: { $in: userPetIds } }).toArray();
+
+    res.json(adoptionRequests);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching adoption requests', error });
+  }
+});
+
+// to handle the accept and reject actions, updating the status of the adoption request in the database.
+
+app.post('/adoption-requests/:id/accept', async (req, res) => {
+  const requestId = req.params.id;
+
+  await adoptCollection.updateOne(
+    { _id: new ObjectId(requestId) },
+    { $set: { status: 'Accepted' } }
+  );
+
+  res.status(200).json({ message: 'Adoption request accepted' });
+});
+
+app.post('/adoption-requests/:id/reject', async (req, res) => {
+  const requestId = req.params.id;
+
+  await adoptCollection.updateOne(
+    { _id: new ObjectId(requestId) },
+    { $set: { status: 'Rejected' } }
+  );
+
+  res.status(200).json({ message: 'Adoption request rejected' });
+});
+
+
+
 
   //payment intent
   app.post('/create-payment-intent', async(req, res)=>{
