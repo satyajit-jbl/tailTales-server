@@ -179,7 +179,7 @@ async function run() {
     //   res.send(result);
     // })
 
-    // get pet by id
+    // get pet by id (****** also using for update pet)
     app.get('/pets/:id', async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
@@ -216,6 +216,26 @@ async function run() {
         res.status(500).send({ message: 'Failed to update pet status', error });
       }
     });
+
+    app.patch('/pets/update/:id', async(req, res)=>{
+       const item = req.body;
+       const id = req.params.id;
+       const filter = {_id: new ObjectId(id)}
+       const updatedDoc = {
+        $set:{
+          name: item.name,
+          category: item.category,
+          age: item.age,
+          location: item.location,
+          shortDescription: item.shortDescription,
+          longDescription: item.longDescription,
+          imageUrl: item.imageUrl
+        }
+       }
+       const result = await petCollection.updateOne(filter, updatedDoc);
+       res.send(result);
+
+    })
     
 
     //donation related apis
@@ -261,6 +281,7 @@ async function run() {
           res.status(500).json({ message: 'Internal server error' });
       }
   });
+
   // to Get Donators for a Donation Campaign to show in modal of MyDonationCampaigns end
 
     app.get('/donations/:id', async (req, res) => {
@@ -268,6 +289,26 @@ async function run() {
       const query = { _id: new ObjectId(id) };
       const result = await donationCollection.findOne(query);
       res.send(result);
+    })
+
+    app.patch('/donations/update/:id', async(req, res)=>{
+      const item = req.body;
+      console.log(item);
+       const id = req.params.id;
+       const filter = {_id: new ObjectId(id)}
+       const updatedDoc = {
+        $set:{
+          petname: item.petname,
+          maxDonation: item.maxDonation,
+          lastDate: item.lastDate,
+          
+          shortDescription: item.shortDescription,
+          longDescription: item.longDescription,
+          imageUrl: item.imageUrl
+        }
+       }
+       const result = await donationCollection.updateOne(filter, updatedDoc);
+       res.send(result);
     })
 
     app.get('/donations/users/:email', async(req, res)=>{
@@ -302,6 +343,14 @@ async function run() {
           res.status(500).send({ message: 'Internal Server Error' });
       }
   });
+
+  app.delete('/donation-campaigns/:id', async (req, res) => {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await donationCollection.deleteOne(query);
+    res.send(result);
+
+  })
 
   //donation Amount related apis' (***************************)
   app.get('/donationAmount', async(req, res)=>{
