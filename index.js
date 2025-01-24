@@ -81,14 +81,14 @@ async function run() {
     //   res.send(result);
     // })
 
-  app.get('/donationAmt/users/:email', async(req, res)=>{
+  app.get('/donationAmt/users/:email', verifyToken, async(req, res)=>{
     const email = req.params.email;
     const query = {email: email};
     const result = await donationAmountCollection.find(query).toArray();
     res.send(result);
   })
 
-  app.delete('/donationAmt/users/:id', async (req, res) => {
+  app.delete('/donationAmt/users/:id',verifyToken, async (req, res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
     const result = await donationAmountCollection.deleteOne(query);
@@ -156,15 +156,16 @@ async function run() {
     })
 
     //pets related apis'
-
+    //sorted by date
     app.get('/pets', async (req, res) => {
-      const result = await petCollection.find().sort({data:-1}).toArray()
+      // const result = await petCollection.find().sort({data:-1}).toArray()
+      const result = await petCollection.find().sort({dateAdded:-1}).toArray()
       res.send(result);
     })
 
     // get pet my email(for my added pet page)
 
-    app.get('/pets/users/:email', async (req, res) => {
+    app.get('/pets/users/:email', verifyToken, async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const result = await petCollection.find(query).toArray();
@@ -203,7 +204,7 @@ async function run() {
     })
 
     // update pet as adopted
-    app.patch('/pets/:id', async (req, res) => {
+    app.patch('/pets/:id', verifyToken, async (req, res) => {
       const { id } = req.params;
       const update = { adopted: true };
       try {
@@ -245,9 +246,11 @@ async function run() {
       const result = await donationCollection.insertOne(donation);
       res.send(result);
     })
-
+    //sort
     app.get('/donations', async(req,res)=>{
-    const result = await donationCollection.find().toArray();
+    // const result = await donationCollection.find().toArray();
+    const result = await donationCollection.find().sort({currentAmount: 1}).toArray();
+      // const result = await petCollection.find().sort({dateAdded:-1}).toArray()
     res.send(result);
     })
 
@@ -318,7 +321,7 @@ async function run() {
       res.send(result);
     })
 
-    app.put('/donation-campaigns/:id/pause', async (req, res) => {
+    app.put('/donation-campaigns/:id/pause',verifyToken, async (req, res) => {
       const { id } = req.params;
       const { isPaused } = req.body;
   
@@ -344,7 +347,7 @@ async function run() {
       }
   });
 
-  app.delete('/donation-campaigns/:id', async (req, res) => {
+  app.delete('/donation-campaigns/:id', verifyToken, verifyAdmin, async (req, res) => {
     const id = req.params.id;
     const query = { _id: new ObjectId(id) };
     const result = await donationCollection.deleteOne(query);
@@ -389,6 +392,8 @@ async function run() {
 
   // to fetch adoption requests related to the pets added by the currently logged-in user.
   // app.get('/adoption-requests', async (req, res) => {
+
+    //problem if i use verify token , then nothing shown in ui
   app.get('/adoption-requests/:email', async (req, res) => {
   try {
     // const userEmail = req.user.email; // Get the logged-in user's email from the request
@@ -408,6 +413,8 @@ async function run() {
 });
 
 // to handle the accept and reject actions, updating the status of the adoption request in the database.
+
+//if i use verify token ui dont response
 
 app.post('/adoption-requests/:id/accept', async (req, res) => {
   const requestId = req.params.id;
@@ -435,7 +442,7 @@ app.post('/adoption-requests/:id/reject', async (req, res) => {
 
 
   //payment intent
-  app.post('/create-payment-intent', async(req, res)=>{
+  app.post('/create-payment-intent',verifyToken, async(req, res)=>{
     const {donationAmount} = req.body;
     const amount = parseInt(donationAmount*100);
 
@@ -482,7 +489,7 @@ app.post('/adoption-requests/:id/reject', async (req, res) => {
 
   // })
 
-  app.post('/payments', async (req, res) => {
+  app.post('/payments',verifyToken, async (req, res) => {
     const { id, email, donationAmount, date, transactionId, petName, petImage } = req.body;
   
     const payment = {
