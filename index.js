@@ -26,7 +26,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect();
+    // await client.connect();
 
     const petCollection = client.db("TailTales").collection("pets");
     const userCollection = client.db("TailTales").collection("users");
@@ -46,7 +46,7 @@ async function run() {
     //middlewares
     const verifyToken = (req, res, next) =>{
       // console.log('inside verify token', req.headers);
-      console.log('inside verify token', req.headers.authorization);
+      // console.log('inside verify token', req.headers.authorization);
       if(!req.headers.authorization){
         return res.status(401).send({message: 'Unauthorized access'})
       }
@@ -120,7 +120,7 @@ async function run() {
       let admin = false;
       if(user){
         admin = user?.role === 'admin'
-        console.log(admin);
+        // console.log(admin);
       }
       res.send({admin});
     })
@@ -280,7 +280,7 @@ async function run() {
   
           res.json({ donators });
       } catch (error) {
-          console.error('Error fetching donators:', error);
+          // console.error('Error fetching donators:', error);
           res.status(500).json({ message: 'Internal server error' });
       }
   });
@@ -296,7 +296,7 @@ async function run() {
 
     app.patch('/donations/update/:id', async(req, res)=>{
       const item = req.body;
-      console.log(item);
+      // console.log(item);
        const id = req.params.id;
        const filter = {_id: new ObjectId(id)}
        const updatedDoc = {
@@ -342,7 +342,7 @@ async function run() {
   
           res.send({ message: 'Pause status updated successfully' });
       } catch (error) {
-          console.error('Error updating pause status:', error);
+          // console.error('Error updating pause status:', error);
           res.status(500).send({ message: 'Internal Server Error' });
       }
   });
@@ -520,13 +520,13 @@ app.post('/adoption-requests/:id/reject', async (req, res) => {
         return res.status(404).send({ message: 'Campaign not found' });
       }
   
-      console.log('Payment processed for user:', email);
+      // console.log('Payment processed for user:', email);
   
       // Send a success response
       res.send({ message: 'Payment processed successfully', donationResult });
   
     } catch (error) {
-      console.error('Error processing payment:', error);
+      // console.error('Error processing payment:', error);
       res.status(500).send({ message: 'Internal Server Error', error });
     }
   });
@@ -540,8 +540,8 @@ app.post('/adoption-requests/:id/reject', async (req, res) => {
 
 
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
