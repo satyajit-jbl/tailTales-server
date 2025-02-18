@@ -34,6 +34,8 @@ async function run() {
     const adoptCollection = client.db("TailTales").collection("adopts");
     const donationAmountCollection = client.db("TailTales").collection("donationAmounts");
 
+    
+
     //jwt related api
     app.post('/jwt', async(req, res)=>{
       const user = req.body;
@@ -530,6 +532,32 @@ app.post('/adoption-requests/:id/reject', async (req, res) => {
       res.status(500).send({ message: 'Internal Server Error', error });
     }
   });
+
+  // stats or analysis
+  app.get('/admin-stats', verifyToken, verifyAdmin, async(req, res)=>{
+    const users = await userCollection.estimatedDocumentCount();
+    const pets = await petCollection.estimatedDocumentCount();
+    const adopts = await adoptCollection.estimatedDocumentCount();
+    
+    const result = await donationAmountCollection.aggregate([
+      {
+        $group: {
+        _id: null,
+        totalDonation: {
+          $sum: '$donationAmount'
+        }
+        }
+      }
+    ]).toArray();
+    const donation = result.length >0 ? result[0].totalDonation : 0;
+
+    res.send({
+      users,
+      pets,
+      adopts,
+      donation
+    })
+  })
 
   
   
